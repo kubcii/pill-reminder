@@ -1,34 +1,177 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react'
+import { PillSchedule } from './components/PillSchedule'
+import { ReminderCard } from './components/ReminderCard'
+import { StreakCounter } from './components/StreakCounter'
+import { ComplianceHeatmap } from './components/ComplianceHeatmap'
+import { SettingsPanel } from './components/SettingsPanel'
+import { usePills } from './components/hooks/usePills'
+import { useStreak } from './components/hooks/useStreak'
+import { useSettings } from './hooks/useSettings'
+import { useNotifications } from './hooks/useNotifications'
+import type { Pill } from './types'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAddPill, setShowAddPill] = useState(false)
+  
+  const { pills, logs, addPill, updatePill, deletePill, markTaken, markMissed, snoozePill } = usePills()
+  const { current: currentStreak, best: bestStreak } = useStreak(logs)
+  const { settings, updateSetting, resetSettings } = useSettings()
+  const { requestPermission, scheduleNotifications, cancelAllNotifications } = useNotifications()
+
+  useEffect(() => {
+    requestPermission()
+  }, [requestPermission])
+
+  useEffect(() => {
+    if (settings.highContrast) {
+      document.body.classList.add('high-contrast')
+    } else {
+      document.body.classList.remove('high-contrast')
+    }
+  }, [settings.highContrast])
+
+  useEffect(() => {
+    const pendingLogs = logs.filter(log => log.status === 'pending')
+    scheduleNotifications(
+      pills,
+      pendingLogs,
+      settings.notificationIntensity
+    )
+    
+    return () => cancelAllNotifications()
+  }, [pills, logs, settings.notificationIntensity, scheduleNotifications, cancelAllNotifications])
+
+  const handleSavePill = (pill: Omit<Pill, 'id'>) => {
+    addPill(pill)
+    setShowAddPill(false)
+  }
+
+  const handleSnooze = (logId: string) => {
+    snoozePill(logId, settings.snoozeMinutes)
+  }
+
+  const pendingReminders = logs
+    .filter(log => log.status === 'pending' || log.status === 'snoozed')
+    .sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <header className="flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+            Pill Reminder
+          </h1>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="giant-button bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+            aria-label="Toggle settings"
+          >
+            Settings
+          </button>
+        </header>
+
+        {showSettings && (
+          <SettingsPanel
+            settings={settings}
+            onUpdateSetting={updateSetting}
+            onReset={resetSettings}
+            onClose={() => setShowSettings(false)}
+          />
+        )}
+
+        <StreakCounter currentStreak={currentStreak} bestStreak={bestStreak} />
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Upcoming Reminders
+            </h2>
+            <button
+              onClick={() => setShowAddPill(!showAddPill)}
+              className="giant-button bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {showAddPill ? 'Cancel' : 'Add Pill'}
+            </button>
+          </div>
+
+          {showAddPill && (
+            <PillSchedule
+              onSave={handleSavePill}
+              onCancel={() => setShowAddPill(false)}
+            />
+          )}
+
+          {pendingReminders.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8 text-xl">
+              No upcoming reminders. Add a pill to get started.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {pendingReminders.map(log => {
+                const pill = pills.find(p => p.id === log.pillId)
+                if (!pill) return null
+                
+                return (
+                  <ReminderCard
+                    key={log.id}
+                    pill={pill}
+                    log={log}
+                    onTaken={() => markTaken(log.id)}
+                    onSnooze={() => handleSnooze(log.id)}
+                    onSkip={() => markMissed(log.id)}
+                  />
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            My Pills
+          </h2>
+          {pills.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+              No pills added yet
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {pills.map(pill => (
+                <div
+                  key={pill.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
+                  style={{ borderLeftWidth: '4px', borderLeftColor: pill.color || '#3B82F6' }}
+                >
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {pill.name}
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">{pill.dosage}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                      Times: {pill.times.join(', ')}
+                    </p>
+                    {pill.notes && (
+                      <p className="text-sm text-gray-500 dark:text-gray-500 italic mt-1">
+                        {pill.notes}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => deletePill(pill.id)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <ComplianceHeatmap logs={logs} pills={pills} />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 
