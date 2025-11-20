@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+/// <reference types="vitest/globals" />
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   formatTime,
   formatDateTime,

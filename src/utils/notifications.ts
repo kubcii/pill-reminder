@@ -25,8 +25,8 @@ export const showNotification = async (
     ...notificationOptions,
     requireInteraction: true,
     silent: intensity === 'quiet',
-    vibrate: intensity === 'loud' ? [200, 100, 200, 100, 200] : intensity === 'normal' ? [200, 100, 200] : undefined,
-  };
+    ...(intensity !== 'quiet' && { vibrate: intensity === 'loud' ? [200, 100, 200, 100, 200] : [200, 100, 200] }),
+  } as NotificationOptions & { vibrate?: number[] };
   
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.ready.then(registration => {

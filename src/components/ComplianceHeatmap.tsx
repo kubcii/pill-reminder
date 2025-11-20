@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PillLog } from '../types';
+import type { PillLog } from '../types';
 
 interface ComplianceHeatmapProps {
   logs: PillLog[];

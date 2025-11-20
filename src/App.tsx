@@ -4,8 +4,8 @@ import { ReminderCard } from './components/ReminderCard'
 import { StreakCounter } from './components/StreakCounter'
 import { ComplianceHeatmap } from './components/ComplianceHeatmap'
 import { SettingsPanel } from './components/SettingsPanel'
-import { usePills } from './components/hooks/usePills'
-import { useStreak } from './components/hooks/useStreak'
+import { usePills } from './hooks/usePills'
+import { useStreak } from './hooks/useStreak'
 import { useSettings } from './hooks/useSettings'
 import { useNotifications } from './hooks/useNotifications'
 import type { Pill } from './types'
@@ -13,15 +13,17 @@ import type { Pill } from './types'
 function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showAddPill, setShowAddPill] = useState(false)
-  
-  const { pills, logs, addPill, updatePill, deletePill, markTaken, markMissed, snoozePill } = usePills()
-  const { current: currentStreak, best: bestStreak } = useStreak(logs)
-  const { settings, updateSetting, resetSettings } = useSettings()
-  const { requestPermission, scheduleNotifications, cancelAllNotifications } = useNotifications()
+
+  const { pills, logs, addPill, deletePill, logPillTaken, logPillMissed, snoozePill } = usePills()
+  const streakData = useStreak(logs)
+  const { settings, updateSettings } = useSettings()
+  const { permission, requestPermission, scheduleForPill, cancelAll } = useNotifications(logs)
 
   useEffect(() => {
-    requestPermission()
-  }, [requestPermission])
+    if (permission !== 'granted') {
+      requestPermission()
+    }
+  }, [permission, requestPermission])
 
   useEffect(() => {
     if (settings.highContrast) {
@@ -32,23 +34,20 @@ function App() {
   }, [settings.highContrast])
 
   useEffect(() => {
-    const pendingLogs = logs.filter(log => log.status === 'pending')
-    scheduleNotifications(
-      pills,
-      pendingLogs,
-      settings.notificationIntensity
-    )
-    
-    return () => cancelAllNotifications()
-  }, [pills, logs, settings.notificationIntensity, scheduleNotifications, cancelAllNotifications])
+    pills.forEach(pill => {
+      scheduleForPill(pill, settings.notificationIntensity)
+    })
+
+    return () => cancelAll()
+  }, [pills, settings.notificationIntensity, scheduleForPill, cancelAll])
 
   const handleSavePill = (pill: Omit<Pill, 'id'>) => {
     addPill(pill)
     setShowAddPill(false)
   }
 
-  const handleSnooze = (logId: string) => {
-    snoozePill(logId, settings.snoozeMinutes)
+  const handleSnooze = (pillId: string, scheduledTime: string) => {
+    snoozePill(pillId, scheduledTime, settings.snoozeMinutes)
   }
 
   const pendingReminders = logs
@@ -74,13 +73,11 @@ function App() {
         {showSettings && (
           <SettingsPanel
             settings={settings}
-            onUpdateSetting={updateSetting}
-            onReset={resetSettings}
-            onClose={() => setShowSettings(false)}
+            onUpdate={updateSettings}
           />
         )}
 
-        <StreakCounter currentStreak={currentStreak} bestStreak={bestStreak} />
+        <StreakCounter streakData={streakData} />
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-4">
@@ -111,15 +108,16 @@ function App() {
               {pendingReminders.map(log => {
                 const pill = pills.find(p => p.id === log.pillId)
                 if (!pill) return null
-                
+
                 return (
                   <ReminderCard
                     key={log.id}
                     pill={pill}
+                    scheduledTime={log.scheduledTime}
                     log={log}
-                    onTaken={() => markTaken(log.id)}
-                    onSnooze={() => handleSnooze(log.id)}
-                    onSkip={() => markMissed(log.id)}
+                    onTaken={() => logPillTaken(log.pillId, log.scheduledTime)}
+                    onSnooze={() => handleSnooze(log.pillId, log.scheduledTime)}
+                    onMiss={() => logPillMissed(log.pillId, log.scheduledTime)}
                   />
                 )
               })}
@@ -137,7 +135,7 @@ function App() {
             </p>
           ) : (
             <div className="space-y-3">
-              {pills.map(pill => (
+              {pills.map((pill: Pill) => (
                 <div
                   key={pill.id}
                   className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
@@ -169,7 +167,7 @@ function App() {
           )}
         </div>
 
-        <ComplianceHeatmap logs={logs} pills={pills} />
+        <ComplianceHeatmap logs={logs} />
       </div>
     </div>
   )

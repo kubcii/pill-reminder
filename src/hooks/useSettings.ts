@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { AppSettings } from '../types';
+import type { AppSettings } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 
 const DEFAULT_SETTINGS: AppSettings = {

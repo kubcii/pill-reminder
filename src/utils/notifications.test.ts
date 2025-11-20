@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   requestNotificationPermission,
@@ -6,13 +7,18 @@ import {
   cancelNotification,
 } from './notifications';
 
+declare const global: typeof globalThis;
+
 describe('Notification Utilities', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     // Reset Notification mock
     global.Notification = vi.fn() as unknown as typeof Notification;
     global.Notification.requestPermission = vi.fn().mockResolvedValue('granted' as NotificationPermission);
-    global.Notification.permission = 'default' as NotificationPermission;
+    Object.defineProperty(global.Notification, 'permission', {
+      writable: true,
+      value: 'default' as NotificationPermission,
+    });
   });
 
   afterEach(() => {

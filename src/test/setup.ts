@@ -1,6 +1,9 @@
+/// <reference types="vitest/globals" />
 import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+
+declare const global: typeof globalThis;
 
 // Cleanup after each test
 afterEach(() => {
@@ -10,7 +13,10 @@ afterEach(() => {
 // Mock browser APIs
 global.Notification = vi.fn() as unknown as typeof Notification;
 global.Notification.requestPermission = vi.fn().mockResolvedValue('granted' as NotificationPermission);
-global.Notification.permission = 'default' as NotificationPermission;
+Object.defineProperty(global.Notification, 'permission', {
+  writable: true,
+  value: 'default' as NotificationPermission,
+});
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -47,4 +53,7 @@ Object.defineProperty(navigator, 'serviceWorker', {
 });
 
 // Make expect available globally
-global.expect = expect;
+Object.defineProperty(global, 'expect', {
+  writable: true,
+  value: expect,
+});

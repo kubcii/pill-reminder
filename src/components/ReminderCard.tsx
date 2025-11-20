@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pill, PillLog } from '../types';
+import type { Pill, PillLog } from '../types';
 
 interface ReminderCardProps {
   pill: Pill;

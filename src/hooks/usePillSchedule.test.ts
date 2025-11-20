@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePillSchedule } from './usePillSchedule';
-import { Pill, PillLog } from '../types';
+import type { Pill, PillLog } from '../types';
 
 // Mock uuid with incrementing counter for predictable IDs
 let uuidCounter = 0;

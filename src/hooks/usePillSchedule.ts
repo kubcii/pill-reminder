@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Pill, PillLog, StreakData } from '../types';
+import { useCallback, useMemo, useEffect } from 'react';
+import type { Pill, PillLog, StreakData } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 import { calculateStreak, parseTimeString, formatDateTime } from '../utils/time';
 import { v4 as uuidv4 } from 'uuid';

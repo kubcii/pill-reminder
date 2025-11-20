@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { PillLog, StreakData } from '../types';
+import type { PillLog, StreakData } from '../types';
 
 export const useStreak = (logs: PillLog[]): StreakData => {
   return useMemo(() => {

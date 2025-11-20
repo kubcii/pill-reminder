@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Pill, PillLog } from '../types';
+import type { Pill, PillLog } from '../types';
 import { requestNotificationPermission, scheduleNotification, cancelNotification } from '../utils/notifications';
 import { parseTimeString } from '../utils/time';
 

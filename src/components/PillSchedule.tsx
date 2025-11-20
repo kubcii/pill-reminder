@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pill } from '../types';
+import type { Pill } from '../types';
 
 interface PillScheduleProps {
   onSave: (pill: Omit<Pill, 'id'>) => void;

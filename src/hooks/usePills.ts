@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Pill, PillLog } from '../types';
+import type { Pill, PillLog } from '../types';
 
 const PILLS_STORAGE_KEY = 'pill-reminder-pills';
 const LOGS_STORAGE_KEY = 'pill-reminder-logs';

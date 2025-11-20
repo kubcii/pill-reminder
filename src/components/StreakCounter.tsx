@@ -1,5 +1,5 @@
 import React from 'react';
-import { StreakData } from '../types';
+import type { StreakData } from '../types';
 
 interface StreakCounterProps {
   streakData: StreakData;
