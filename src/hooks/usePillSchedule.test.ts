@@ -548,18 +548,19 @@ describe('usePillSchedule', () => {
     it('should generate logs for new day', async () => {
       vi.setSystemTime(new Date('2025-01-20T08:00:00'));
 
-      const { result } = renderHook(() => usePillSchedule());
+      const { result, rerender } = renderHook(() => usePillSchedule());
 
-      // Add a pill and wait for effects to run
-      await act(async () => {
+      // Add a pill
+      act(() => {
         result.current.addPill({
           name: 'Aspirin',
           dosage: '100mg',
           times: ['09:00', '21:00'],
         });
-        // Give time for useEffect to run
-        await vi.runAllTimersAsync();
       });
+
+      // Force re-render to trigger useEffect
+      rerender();
 
       // Logs should be generated for today
       const todayLogs = result.current.logs.filter(log => {

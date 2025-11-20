@@ -30,7 +30,7 @@ export function usePillSchedule(): UsePillScheduleReturn {
   // Generate daily logs for all pills
   useEffect(() => {
     const today = new Date().toDateString();
-    if (lastScheduleDate !== today) {
+    if (lastScheduleDate !== today && pills.length > 0) {
       const newLogs: PillLog[] = [];
 
       pills.forEach(pill => {
@@ -45,8 +45,10 @@ export function usePillSchedule(): UsePillScheduleReturn {
         });
       });
 
-      setLogs(prev => [...prev, ...newLogs]);
-      setLastScheduleDate(today);
+      if (newLogs.length > 0) {
+        setLogs(prev => [...prev, ...newLogs]);
+        setLastScheduleDate(today);
+      }
     }
   }, [pills, lastScheduleDate, setLogs, setLastScheduleDate]);
 
@@ -80,19 +82,21 @@ export function usePillSchedule(): UsePillScheduleReturn {
   }, [setLogs]);
 
   const snoozePill = useCallback((logId: string, snoozeMinutes: number) => {
-    const snoozeUntil = new Date();
-    snoozeUntil.setMinutes(snoozeUntil.getMinutes() + snoozeMinutes);
-
     setLogs(prev =>
-      prev.map(log =>
-        log.id === logId
-          ? {
-              ...log,
-              status: 'snoozed' as const,
-              snoozedUntil: formatDateTime(snoozeUntil)
-            }
-          : log
-      )
+      prev.map(log => {
+        if (log.id !== logId) return log;
+
+        // Calculate snooze time from scheduled time (not current time)
+        const scheduledDate = new Date(log.scheduledTime);
+        const snoozeUntil = new Date(scheduledDate);
+        snoozeUntil.setMinutes(snoozeUntil.getMinutes() + snoozeMinutes);
+
+        return {
+          ...log,
+          status: 'snoozed' as const,
+          snoozedUntil: formatDateTime(snoozeUntil)
+        };
+      })
     );
   }, [setLogs]);
 

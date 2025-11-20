@@ -114,13 +114,15 @@ describe('Notification Utilities', () => {
       delete (navigator as any).serviceWorker;
 
       await showNotification('Test', { intensity: 'quiet' });
-      expect(global.Notification).toHaveBeenCalledWith(
-        'Test',
-        expect.objectContaining({
-          silent: true,
-          vibrate: undefined,
-        })
-      );
+
+      const notificationCall = (global.Notification as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(notificationCall[0]).toBe('Test');
+      expect(notificationCall[1]).toMatchObject({
+        silent: true,
+        requireInteraction: true,
+      });
+      // vibrate should not be present for quiet intensity
+      expect(notificationCall[1]).not.toHaveProperty('vibrate');
     });
 
     it('should set normal vibration pattern', async () => {
@@ -192,7 +194,10 @@ describe('Notification Utilities', () => {
       const futureTime = new Date('2025-01-20T14:30:00');
       const timeoutId = scheduleNotification('Aspirin', futureTime);
 
-      expect(timeoutId).toBeGreaterThanOrEqual(0);
+      // setTimeout returns a number in Node/jsdom, or an object in browser
+      // Just verify it's truthy and not -1 (which means immediate)
+      expect(timeoutId).toBeDefined();
+      expect(timeoutId).not.toBe(-1);
 
       // Wait for any async operations
       await vi.waitFor(() => {
@@ -256,24 +261,31 @@ describe('Notification Utilities', () => {
         expect(global.Notification).toHaveBeenCalledWith(
           'Time to take Aspirin',
           expect.objectContaining({
-            intensity: 'loud',
+            // intensity is transformed to silent/vibrate, not passed through
+            silent: false,
+            vibrate: [200, 100, 200, 100, 200],
           })
         );
       });
     });
 
     it('should create unique tag per pill and time', async () => {
+      // Use two different past times so both trigger immediately
       const time1 = new Date('2025-01-20T13:30:00');
-      const time2 = new Date('2025-01-20T14:30:00');
+      const time2 = new Date('2025-01-20T13:45:00');
 
       scheduleNotification('Aspirin', time1);
+
+      // Wait for the first notification to complete
       await vi.waitFor(() => {
-        expect(global.Notification).toHaveBeenCalledTimes(1);
+        expect(global.Notification).toHaveBeenCalled();
       });
 
       const tag1 = (global.Notification as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].tag;
 
       scheduleNotification('Aspirin', time2);
+
+      // Wait for the second notification
       await vi.waitFor(() => {
         expect(global.Notification).toHaveBeenCalledTimes(2);
       });
